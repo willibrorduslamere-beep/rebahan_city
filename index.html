@@ -126,9 +126,9 @@ const cv=$("#cv");let ctx=cv.getContext("2d");const mainCtx=ctx;
 const mod=(a,b)=>((a%b)+b)%b;
 const isPlaza=(i,j)=>Math.abs(i)<=2&&Math.abs(j)<=2;
 /* ---------- zona khusus: Taman Tugu, Persawahan, Peternakan, Tambang ---------- */
-const ZN=[{k:"tugu",i0:-8,i1:-4,j0:-8,j1:-4},{k:"sawah",i0:10,i1:11,j0:4,j1:11},{k:"ternak",i0:10,i1:11,j0:-11,j1:-4},{k:"tambang",i0:-11,i1:-10,j0:4,j1:11}];
+const ZN=[{k:"tugu",i0:-8,i1:-4,j0:-8,j1:-4},{k:"sawah",i0:10,i1:11,j0:4,j1:11},{k:"ternak",i0:10,i1:11,j0:-11,j1:-4},{k:"tambang",i0:-11,i1:-10,j0:4,j1:11},{k:"bandara",i0:-11,i1:-10,j0:-11,j1:-4}];
 const zoneOf=(i,j)=>{for(const z of ZN)if(i>=z.i0&&i<=z.i1&&j>=z.j0&&j<=z.j1)return z.k;return null};
-const ZBLK={"-6,-6":1,"10,-8":1,"11,-8":1,"-11,7":1,"-10,9":1,"11,9":1};
+const ZBLK={"-6,-6":1,"10,-8":1,"11,-8":1,"-11,7":1,"-10,9":1,"11,9":1,"-10,-7":1,"-10,-5":1};
 const isRoadL=(i,j)=>!isPlaza(i,j)&&(mod(i,3)===0||mod(j,3)===0); /* definisi lama: dipakai menomori kavling agar blok warga lama tidak bergeser */
 const isRoad=(i,j)=>isRoadL(i,j)&&!zoneOf(i,j);
 const hsh=(i,j)=>((i*73856093)^(j*19349663))>>>0;
@@ -488,23 +488,33 @@ function draw(now){
   const wt=curW(),[,dk]=phase();sky(now,W,H,wt,dk);if(dk){ctx.fillStyle=`rgba(10,20,60,${dk})`;ctx.fillRect(0,0,W,H)}
   if(window.HX)HX.after(now,W,H);weatherFX(now,W,H,wt,dk);drawPlanes(now,W)
 }
-function plane(x,y,txt){
-  ctx.save();ctx.translate(x,y);
+function planeBW(txt){ctx.save();ctx.font="bold 15px Segoe UI,sans-serif";const w=ctx.measureText(txt).width+24;ctx.restore();return w}
+function plane(x,y,txt,s,bw){
+  ctx.save();ctx.translate(x,y);ctx.scale(s,s);
   ctx.fillStyle="#fff";ctx.strokeStyle="#444";ctx.lineWidth=1.5;
   ctx.beginPath();ctx.ellipse(0,0,26,7,0,0,7);ctx.fill();ctx.stroke();
   poly([-6,0,-20,-16,-12,-16,6,0],"#e9e9e9");poly([-6,2,-18,14,-10,14,6,2],"#d4d4d4");poly([-22,-2,-30,-12,-24,-12,-16,-2],"#e07b39");
-  ctx.strokeStyle="#666";ctx.beginPath();ctx.moveTo(-26,0);ctx.lineTo(-52,0);ctx.stroke();
-  ctx.font="bold 13px Segoe UI,sans-serif";const w=ctx.measureText(txt).width+16;
-  ctx.fillStyle="#fff3c9";ctx.strokeStyle="#7a5a3a";ctx.beginPath();ctx.roundRect(-52-w,-11,w,22,6);ctx.fill();ctx.stroke();
-  ctx.fillStyle="#2b2a22";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(txt,-52-w/2,1);ctx.restore()
+  ctx.fillStyle="#6fa8c8";for(let k=0;k<5;k++)ctx.fillRect(-12+k*6,-3,3,3);
+  ctx.strokeStyle="#666";ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(-26,0);ctx.lineTo(-52,0);ctx.stroke();
+  ctx.font="bold 15px Segoe UI,sans-serif";
+  ctx.fillStyle="#fffbe8";ctx.strokeStyle="#7a5a3a";ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(-52-bw,-15,bw,30,8);ctx.fill();ctx.stroke();
+  ctx.fillStyle="#1d1b16";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(txt,-52-bw/2,1);ctx.restore()
+}
+/* pesawat membawa nama: masuk dari kiri, berhenti di tengah layar supaya nama terbaca, lalu keluar ke kanan */
+function flyBanner(txt,u,hold,W){
+  const bw=planeBW(txt),s=Math.max(.7,Math.min(1.9,(W-30)/(bw+84))),cx=W/2+(bw/2+12)*s,x0=-40*s,x1=W+(bw+70)*s,e=k=>k*k*(3-2*k);
+  let x;if(!hold)x=x0+(x1-x0)*u;else if(u<.28)x=x0+(cx-x0)*(1-Math.pow(1-u/.28,2));else if(u<.72)x=cx+Math.sin(u*40)*2;else x=cx+(x1-cx)*e((u-.72)/.28)*(1);
+  const y=VH*.4+(hold&&u>=.28&&u<=.72?Math.sin(u*30)*3:0);
+  plane(x,y,txt,s,bw)
 }
 function drawPlanes(now,W){
   planes=planes.filter(p=>now-p.t0<p.dur);
-  planes.forEach(p=>{const u=(now-p.t0)/p.dur;plane(-200+u*(W+500),70+Math.sin(u*6)*8,p.txt)});
+  planes.forEach(p=>flyBanner(p.txt,(now-p.t0)/p.dur,true,W));
   const f=S.flights[0];
-  if(f&&!planes.length){const c=(now%40000)/40000;if(c<.6){const u=c/.6;plane(-200+u*(W+500),70,f.txt)}}
+  if(f&&!planes.length){const c=(now%40000)/40000;if(c<.45)flyBanner(f.txt,c/.45,false,W)}
 }
-function launch(txt){planes.push({t0:performance.now(),dur:14000,txt})}
+
+function launch(txt){planes.push({t0:performance.now(),dur:16000,txt})}
 (function loop(t){draw(t);requestAnimationFrame(loop)})(0);
 
 /* gesture */

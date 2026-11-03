@@ -33,6 +33,7 @@ const JOBS = [
   { id: "guru",      n: "Guru",                   e: "📚", wp: "sekolah",     g: 60,  d: 90,  lv: 2, q: 4 },
   { id: "polisi",    n: "Polisi",                 e: "👮", wp: "polisi",      g: 60,  d: 90,  lv: 2, q: 3 },
   { id: "damkar",    n: "Petugas Damkar",         e: "🚒", wp: "damkar",      g: 60,  d: 90,  lv: 2, q: 3 },
+  { id: "bandara",   n: "Petugas Bandara",        e: "✈️", wp: "bandara",     g: 80,  d: 90,  lv: 2, q: 4 },
   { id: "penambang", n: "Penambang",              e: "⛏️", wp: "tambang",     g: 110, d: 120, lv: 3, q: 5 }
 ];
 const RK = ["Pemula", "Berpengalaman", "Senior"], MULT = [1, 1.3, 1.7], MAXS = 6;
@@ -73,7 +74,7 @@ function ensureInit() {
   const nb = d => { const r = [d]; [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(p => { const t = [d[0] + p[0], d[1] + p[1]]; if (walkOK(t[0], t[1])) r.push(t); }); return r; };
   POL.forEach(o => { const dd = door(o.i, o.j); WPT[o.k] = nb(dd); POD.push(dd); });
   const zt = k => { const z = ZN.find(q => q.k === k), r = []; for (let i = z.i0; i <= z.i1; i++) for (let j = z.j0; j <= z.j1; j++) if (!ZBLK[i + "," + j]) r.push([i, j]); return r; };
-  WPT.sawah = zt("sawah"); WPT.ternak = zt("ternak"); WPT.tambang = zt("tambang"); TWK = zt("tugu");
+  WPT.sawah = zt("sawah"); WPT.ternak = zt("ternak"); WPT.tambang = zt("tambang"); WPT.bandara = zt("bandara").filter(q => q[0] === -10); TWK = zt("tugu");
   WPT.pasar = MZ; WPT.pelabuhan = PZ;
   WPT.sekolah = LML.filter(o => ["sd", "smp", "sma", "univ"].includes(o.k)).map(o => door(o.i, o.j));
   WPT.damkar = [door(...FIRE)]; WPT.polisi = [door(...POLICE)];
@@ -193,7 +194,7 @@ function tower(now) {
   gl(x, fy - 6, 120, 1.5); gl(x, y - 40, 90, .8);
   if (S.reno && S.reno["Taman Tugu Rebahan"]) { ctx.font = "16px sans-serif"; ctx.textAlign = "center"; ctx.fillText("✨", x + 22, y - 120 + Math.sin(now / 250) * 3); ctx.fillText("✨", x - 22, y - 200 - Math.sin(now / 300) * 3); }
 }
-HX.late = function (s) { if (s === -12) tower(performance.now()); };
+HX.late = function (s) { if (s === -12) tower(performance.now()); if (s === -13) planesWorld(performance.now()); };
 
 /* ---- Sawah ---- */
 function scarecrow(x, y) {
@@ -280,6 +281,60 @@ function tambang(i, j, x, y, now, names) {
   if (i === FRAME[0] && j === FRAME[1]) frame(x, y, now);
 }
 
+/* ---- Bandara ---- */
+const TERM = [-10, -7], ATC = [-10, -5], WSOCK = [-10, -10], PARKED = [-10, -9];
+function planeBody(sc, col) {
+  ctx.fillStyle = col || "#fff"; ctx.strokeStyle = "#555"; ctx.lineWidth = 1 / sc; ctx.beginPath(); ctx.ellipse(0, 0, 24, 5.5, 0, 0, 7); ctx.fill(); ctx.stroke();
+  poly([-2, -3, -9, -22, -3, -22, 6, -3], "#e6e6e6"); poly([-2, 3, -9, 22, -3, 22, 6, 3], "#d2d2d2");
+  poly([-21, -1, -28, -10, -23, -10, -15, -1], "#e07b39"); cir(18, -1, 2, "#6fa8c8");
+}
+function worldPlane(x, y, alt, ang, sc) {
+  ctx.fillStyle = "rgba(0,0,0," + (.22 - Math.min(.15, alt / 500)).toFixed(2) + ")"; ctx.beginPath(); ctx.ellipse(x, y + 2, 22 * sc, 5 * sc, 0, 0, 7); ctx.fill();
+  ctx.save(); ctx.translate(x, y - alt - 6); ctx.rotate(ang); ctx.scale(sc, sc * .8); planeBody(sc); ctx.restore();
+}
+const RUNANG = Math.atan2(16, -32);
+function runwayPt(j) { return [(-11 - j) * 32, (-11 + j) * 16]; }
+function bandara(i, j, x, y, now, names) {
+  const night = HX.night, par = (i + j) % 2;
+  if (i === -11) {
+    tile(x, y, "#5a5d66"); ctx.strokeStyle = "#f4f4f4"; ctx.lineWidth = 2; ctx.beginPath();
+    [[-.38, -.16], [.14, .36]].forEach(d => { const p = pt(x, y, 0, d[0]), q = pt(x, y, 0, d[1]); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); });
+    ctx.stroke(); ctx.lineWidth = 1; ctx.strokeStyle = "rgba(255,255,255,.6)"; ctx.beginPath();
+    [-.42, .42].forEach(a => { const p = pt(x, y, a, -.5), q = pt(x, y, a, .5); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); }); ctx.stroke();
+    if (j === -11 || j === -4) { ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.beginPath(); for (let k = -2; k <= 2; k++) { const p = pt(x, y, k * .15, j === -11 ? -.4 : .4), q = pt(x, y, k * .15, j === -11 ? -.22 : .22); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); } ctx.stroke(); }
+    if (night) { const bl = Math.sin(now / 350 + j) > -.2; [-.46, .46].forEach(a => { const p = pt(x, y, a, 0); cir(p[0], p[1], 1.8, bl ? "#ffd24a" : "#8a6d1c"); }); gl(x, y, 40, .5); }
+    return;
+  }
+  tile(x, y, par ? "#9a9da5" : "#8f929a");
+  ctx.strokeStyle = "#f2c230"; ctx.lineWidth = 1.4; ctx.beginPath(); const p = pt(x, y, -.3, -.5), q = pt(x, y, -.3, .5); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke();
+  if (i === TERM[0] && j === TERM[1]) {
+    const g = isoBox(x, y, 15, 15, 20, "#eef1f5", "#d3dae3", "#b6c0ce");
+    faceQ(g.Fr, g.Rt, .06, .94, 3, 13, night ? "#ffe9a8" : "#8cc4ea"); faceQ(g.Lf, g.Fr, .08, .92, 3, 13, night ? "#ffdf8a" : "#7db6de");
+    faceQ(g.Fr, g.Rt, 0, 1, 15.5, 20, "#2a6fd0"); faceQ(g.Lf, g.Fr, 0, 1, 15.5, 20, "#1f58ab"); faceQ(g.Fr, g.Rt, .4, .6, 0, 8, "#3b5a78");
+    isoBox(x, y - 20, 16, 16, 3, "#dfe5ec", "#c5cdd8", "#aab4c2");
+    ctx.save(); ctx.translate(g.Fr[0], g.Fr[1] - 17.5); ctx.transform(1, -.5, 0, 1, 0, 0); ctx.font = "bold 6.5px Segoe UI,sans-serif"; ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("BANDARA", 15, 0); ctx.restore();
+    names.unshift(["✈ " + nm("Bandara Rebahan"), x, y - 70]); if (night) gl(x, y - 10, 70, .8);
+  } else if (i === ATC[0] && j === ATC[1]) {
+    isoBox(x, y, 3.5, 3.5, 52, "#e8ecf1", "#cfd6df", "#b3bcc9"); isoBox(x, y - 52, 6.5, 6.5, 9, "#9fd0ee", "#7fb8dc", "#5f9cc4"); isoBox(x, y - 61, 7.5, 7.5, 2, "#cfd6df", "#b3bcc9", "#9aa5b4");
+    ctx.strokeStyle = "#8a8f98"; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x, y - 63); ctx.lineTo(x, y - 76); ctx.stroke();
+    const on = Math.sin(now / 500) > 0; cir(x, y - 77, 2.4, on ? "#ff4d3d" : "#7a2a22"); if (on && night) gl(x, y - 77, 40, .9);
+  } else if (i === WSOCK[0] && j === WSOCK[1]) {
+    ctx.strokeStyle = "#777"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y + 2); ctx.lineTo(x, y - 30); ctx.stroke();
+    const w = Math.sin(now / 500) * 3; poly([x, y - 30, x + 14, y - 27 + w, x + 14, y - 22 + w, x, y - 24], "#f08a2a"); poly([x + 5, y - 29, x + 8, y - 28 + w, x + 8, y - 23 + w, x + 5, y - 24], "#fff");
+  } else if (i === PARKED[0] && j === PARKED[1]) worldPlane(x, y - 2, 0, RUNANG, .75);
+}
+function planesWorld(now) {
+  if (!visT(-340, -200, 260) && !visT(-330, -240, 260)) return;
+  (typeof planes !== "undefined" ? planes : []).forEach(p => {
+    const u = (now - p.t0) / p.dur; if (u < 0 || u > 1) return;
+    let j, alt;
+    if (u < .3) { const k = u / .3, e = 1 - Math.pow(1 - k, 2); j = -17 + 9 * e; alt = 80 * Math.pow(1 - k, 1.6); }
+    else if (u < .8) { j = -8; alt = 0; }
+    else { const k = (u - .8) / .2; j = -8 + 14 * k * k; alt = 110 * k * k; }
+    const q = runwayPt(j); worldPlane(q[0], q[1], alt, RUNANG, 1.1);
+    if (u >= .3 && u < .8) pill(String(p.txt).slice(0, 34), q[0], q[1] - 34);
+  });
+}
 /* ---- Toko, kantor, pabrik ---- */
 function shop(x, y, o, name) {
   y -= 2; poly([x - 30, y, x, y - 15, x + 30, y, x, y + 15], "#e9e2d3");
@@ -332,6 +387,7 @@ HX.tile = function (i, j, x, y, now, names) {
     if (z === "tugu") tuguTile(i, j, x, y, now, names);
     else if (z === "sawah") sawah(i, j, x, y, now, names);
     else if (z === "ternak") ternak(i, j, x, y, now, names);
+    else if (z === "bandara") bandara(i, j, x, y, now, names);
     else tambang(i, j, x, y, now, names);
     return true;
   }
@@ -354,7 +410,7 @@ HX.tile = function (i, j, x, y, now, names) {
 const NPCS = [
   ["petani", 3, "sawah", "Petani", "#6aa84f", 1, "hat"], ["peternak", 3, "ternak", "Peternak", "#c0453a", 1, "hat"], ["penambang", 3, "tambang", "Penambang", "#f2b01e", 1, "helm"],
   ["kasir-i", 1, "indomaret", "Kasir", "#1f5fb4", 0], ["kasir-a", 1, "alfamart", "Kasir", "#d62b2b", 0], ["kasir-m", 1, "alfamidi", "Kasir", "#d62b2b", 0],
-  ["kasir-s", 2, "supermarket", "Pramuniaga", "#2a9d5c", 0], ["karyawan", 3, "kantor", "Karyawan", "#5a6f8f", 0], ["operator", 2, "pabrik", "Operator", "#e07b39", 0]
+  ["kasir-s", 2, "supermarket", "Pramuniaga", "#2a9d5c", 0], ["karyawan", 3, "kantor", "Karyawan", "#5a6f8f", 0], ["bandara", 2, "bandara", "Petugas", "#f28c1e", 0], ["operator", 2, "pabrik", "Operator", "#e07b39", 0]
 ];
 HX.mk = function (mk, now) {
   ensureInit();
@@ -460,7 +516,7 @@ window.addEventListener("load", function () {
     else { const x = locDM().find(q => q.id === id); if (x) { x.dukung = (x.dukung || []).filter(u => u !== me); if (on) x.dukung.push(me); } HX.DM = S.demos; save(); }
   }
   const mEmo = m => m >= 80 ? "😊" : m >= 55 ? "😐" : m >= 30 ? "😠" : "😡";
-  const TARGETS = () => ["Kota secara umum"].concat(LML.map(o => o.n), POL.map(o => o.n), ["Taman Tugu Rebahan", "Persawahan Rebahan", "Peternakan Rebahan", "Tambang Rebahan", "Pasar Rebahan", "Pelabuhan"]);
+  const TARGETS = () => ["Kota secara umum"].concat(LML.map(o => o.n), POL.map(o => o.n), ["Taman Tugu Rebahan", "Persawahan Rebahan", "Peternakan Rebahan", "Tambang Rebahan", "Bandara Rebahan", "Pasar Rebahan", "Pelabuhan"]);
 
   function demoCard(d, adm) {
     const n = (d.dukung || []).length, mine = (d.dukung || []).includes(me), on = isActive(d);

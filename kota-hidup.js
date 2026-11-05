@@ -34,7 +34,9 @@ const JOBS = [
   { id: "polisi",    n: "Polisi",                 e: "👮", wp: "polisi",      g: 60,  d: 90,  lv: 2, q: 3 },
   { id: "damkar",    n: "Petugas Damkar",         e: "🚒", wp: "damkar",      g: 60,  d: 90,  lv: 2, q: 3 },
   { id: "bandara",   n: "Petugas Bandara",        e: "✈️", wp: "bandara",     g: 80,  d: 90,  lv: 2, q: 4 },
-  { id: "penambang", n: "Penambang",              e: "⛏️", wp: "tambang",     g: 110, d: 120, lv: 3, q: 5 }
+  { id: "penambang", n: "Penambang",              e: "⛏️", wp: "tambang",     g: 110, d: 120, lv: 3, q: 5 },
+  { id: "dokter",    n: "Dokter",                 e: "🩺", wp: "rumahsakit",  g: 95,  d: 90,  lv: 2, q: 3 },
+  { id: "perawat",   n: "Perawat",                e: "💉", wp: "rumahsakit",  g: 70,  d: 75,  lv: 2, q: 5 }
 ];
 const RK = ["Pemula", "Berpengalaman", "Senior"], MULT = [1, 1.3, 1.7], MAXS = 6;
 const jobOf = id => JOBS.find(j => j.id === id);
@@ -68,14 +70,15 @@ function ensureInit() {
   PDEF.forEach(d => {
     cand.sort((a, b) => Math.hypot(a[0] - d[2], a[1] - d[3]) - Math.hypot(b[0] - d[2], b[1] - d[3]));
     const t = cand.shift(); if (!t) return;
-    const o = { n: d[0], k: d[1], i: t[0], j: t[1], hh: d[1] === "kantor" ? 108 : d[1] === "pabrik" ? 100 : d[1] === "supermarket" ? 62 : 56 };
+    const o = { n: d[0], k: d[1], i: t[0], j: t[1], hh: d[1] === "rumahsakit" ? 96 : d[1] === "kantor" ? 108 : d[1] === "pabrik" ? 100 : d[1] === "supermarket" ? 62 : 56 };
     PO[t[0] + "," + t[1]] = o; POL.push(o);
   });
   const nb = d => { const r = [d]; [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(p => { const t = [d[0] + p[0], d[1] + p[1]]; if (walkOK(t[0], t[1])) r.push(t); }); return r; };
+  HX.POL = POL;
   POL.forEach(o => { const dd = door(o.i, o.j); WPT[o.k] = nb(dd); POD.push(dd); });
   const zt = k => { const z = ZN.find(q => q.k === k), r = []; for (let i = z.i0; i <= z.i1; i++) for (let j = z.j0; j <= z.j1; j++) if (!ZBLK[i + "," + j]) r.push([i, j]); return r; };
   WPT.sawah = zt("sawah"); WPT.ternak = zt("ternak"); WPT.tambang = zt("tambang"); WPT.bandara = zt("bandara").filter(q => q[0] === -10); TWK = zt("tugu");
-  WPT.pasar = MZ; WPT.pelabuhan = PZ;
+  WPT.pasar = MZ; WPT.pelabuhan = PZ; WPT.rumahsakit = zt("rs");
   WPT.sekolah = LML.filter(o => ["sd", "smp", "sma", "univ"].includes(o.k)).map(o => door(o.i, o.j));
   WPT.damkar = [door(...FIRE)]; WPT.polisi = [door(...POLICE)];
   for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) if (i || j) SPOT.push([i, j]);
@@ -374,8 +377,38 @@ function pabrik(x, y, now, name) {
   if (HX.night) gl(x, y - 14, 60, .8);
   if (S.reno && S.reno[name]) { ctx.font = "15px sans-serif"; ctx.textAlign = "center"; ctx.fillText("✨", x + 30, y - 40 + Math.sin(now / 250) * 3); }
 }
+function rumahsakit(x, y, name) {
+  y -= 2; poly([x - 36, y, x, y - 18, x + 36, y, x, y + 18], "#e8ecef");
+  const w = 17, H = 62, g = isoBox(x, y, w, w, H, "#f4f8fb", "#e3ebf1", "#cfdae3"), lit = HX.night;
+  for (let f = 0; f < 5; f++) for (let c = 0; c < 4; c++) {
+    const on = lit && rr(f * 5 + c, 9) > .35, col = on ? "#fff0b0" : "#bfe3f4";
+    faceQ(g.Fr, g.Rt, .08 + c * .23, .08 + c * .23 + .15, 14 + f * 9, 14 + f * 9 + 5.6, col);
+    faceQ(g.Lf, g.Fr, .08 + c * .23, .08 + c * .23 + .15, 14 + f * 9, 14 + f * 9 + 5.6, on ? "#ffe39a" : "#a9d3e8");
+  }
+  faceQ(g.Fr, g.Rt, .36, .64, 0, 11, "#6d8ba3"); faceQ(g.Fr, g.Rt, .4, .6, 0, 10, lit ? "#fff0b0" : "#cfe9f6");
+  faceQ(g.Fr, g.Rt, 0, 1, H - 6, H - 3, "#e5484d");
+  ctx.save(); ctx.translate(g.Fr[0], g.Fr[1] - H * .5 - 2); ctx.transform(1, -.5, 0, 1, 0, 0);
+  ctx.fillStyle = "#fff"; ctx.fillRect(w - 9, -9, 18, 18); ctx.fillStyle = "#e5484d"; ctx.fillRect(w - 2.5, -8, 5, 16); ctx.fillRect(w - 8, -2.5, 16, 5); ctx.restore();
+  isoBox(x, y - H, 12, 12, 4, "#d6dde3", "#bfc9d1", "#a9b5bf");
+  ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y - H - 6, 8, 4, 0, 0, 7); ctx.stroke();
+  ctx.font = "bold 8px Segoe UI,sans-serif"; ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("H", x, y - H - 6);
+  const on2 = Math.sin(performance.now() / 420) > 0; cir(x + 10, y - H - 8, 2.2, on2 ? "#ff4d3d" : "#7a2a22");
+  if (lit) gl(x, y - H * .5, 84, 1);
+  if (S.reno && S.reno[name]) { ctx.font = "15px sans-serif"; ctx.textAlign = "center"; ctx.fillText("✨", x + 32, y - H * .7 + Math.sin(performance.now() / 250) * 3); }
+}
+function rsTile(i, j, x, y, now, names) {
+  tile(x, y, (i + j) % 2 ? "#e6edf2" : "#dae3ea");
+  if (i === 5 && j === -8) { rumahsakit(x, y, "Rumah Sakit Rebahan"); names.unshift(["Rumah Sakit Rebahan" + ((S.reno && S.reno["Rumah Sakit Rebahan"]) ? " ✨" : ""), x, y - 98]); return; }
+  if ((i === 4 || i === 6) && (j === -9 || j === -7)) { [[-9, -2], [8, 1], [-2, 6], [10, -4]].forEach((p, k) => cir(x + p[0], y + p[1] - 5, 5 - (k % 2), k % 2 ? "#3f9a5b" : "#4fae6a")); return; }
+  if (i === 6 && j === -8) {
+    const g = isoBox(x - 4, y, 7, 10, 8, "#ffffff", "#f2f4f6", "#dde2e7"); faceQ(g.Fr, g.Rt, 0, 1, 3, 5, "#e5484d"); faceQ(g.Lf, g.Fr, .15, .85, 4, 7, "#9fd4ee");
+    const on = Math.sin(performance.now() / 160) > 0; cir(x - 4, y - 10, 1.8, on ? "#ff3b30" : "#3b82f6"); return;
+  }
+  if (i === 5 && j === -7) { ctx.fillStyle = "#e5484d"; ctx.beginPath(); ctx.roundRect(x - 13, y - 22, 26, 11, 3); ctx.fill(); ctx.font = "bold 8px Segoe UI,sans-serif"; ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("IGD 24 JAM", x, y - 16.5, 24); ctx.strokeStyle = "#8a8f98"; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x, y - 11); ctx.lineTo(x, y + 2); ctx.stroke(); }
+  if (i === 5 && j === -9) { cir(x, y - 3, 7, "#a9d8ef"); cir(x, y - 3, 4, "#cdebf8"); }
+}
 function drawPO(o, x, y, now) {
-  if (SHOP[o.k]) shop(x, y, SHOP[o.k], o.n); else if (o.k === "kantor") kantor(x, y, o.n); else pabrik(x, y, now, o.n);
+  if (SHOP[o.k]) shop(x, y, SHOP[o.k], o.n); else if (o.k === "rumahsakit") rumahsakit(x, y, o.n); else if (o.k === "kantor") kantor(x, y, o.n); else pabrik(x, y, now, o.n);
 }
 
 /* ===================== HOOK TILE ===================== */
@@ -388,6 +421,7 @@ HX.tile = function (i, j, x, y, now, names) {
     else if (z === "sawah") sawah(i, j, x, y, now, names);
     else if (z === "ternak") ternak(i, j, x, y, now, names);
     else if (z === "bandara") bandara(i, j, x, y, now, names);
+    else if (z === "rs") rsTile(i, j, x, y, now, names);
     else tambang(i, j, x, y, now, names);
     return true;
   }
@@ -410,7 +444,7 @@ HX.tile = function (i, j, x, y, now, names) {
 const NPCS = [
   ["petani", 3, "sawah", "Petani", "#6aa84f", 1, "hat"], ["peternak", 3, "ternak", "Peternak", "#c0453a", 1, "hat"], ["penambang", 3, "tambang", "Penambang", "#f2b01e", 1, "helm"],
   ["kasir-i", 1, "indomaret", "Kasir", "#1f5fb4", 0], ["kasir-a", 1, "alfamart", "Kasir", "#d62b2b", 0], ["kasir-m", 1, "alfamidi", "Kasir", "#d62b2b", 0],
-  ["kasir-s", 2, "supermarket", "Pramuniaga", "#2a9d5c", 0], ["karyawan", 3, "kantor", "Karyawan", "#5a6f8f", 0], ["bandara", 2, "bandara", "Petugas", "#f28c1e", 0], ["operator", 2, "pabrik", "Operator", "#e07b39", 0]
+  ["kasir-s", 2, "supermarket", "Pramuniaga", "#2a9d5c", 0], ["karyawan", 3, "kantor", "Karyawan", "#5a6f8f", 0], ["bandara", 2, "bandara", "Petugas", "#f28c1e", 0], ["operator", 2, "pabrik", "Operator", "#e07b39", 0], ["dokter-npc", 2, "rumahsakit", "Dokter", "#f4f8fb", 0], ["perawat-npc", 2, "rumahsakit", "Perawat", "#7fd1c7", 0]
 ];
 HX.mk = function (mk, now) {
   ensureInit();
@@ -441,6 +475,11 @@ HX.pick = function (a, now) {
   if (a.k !== "r") return false;
   const w = S.warga[a.u]; if (!w) return false;
   a.dm = null; a.wk = null;
+  if (a.buy) {
+    const t = WPT[a.buy.k];
+    if (t && t.length) { if (near(t)) { const b = a.buy; a.buy = null; try { b.done(); } catch (e) {} return stay(3500); } return go(rnd(t)); }
+  }
+  if (w.rwt && w.rwt.u > Date.now() && WPT.rumahsakit && WPT.rumahsakit.length) return near(WPT.rumahsakit) ? stay(5000 + Math.random() * 4000) : go(rnd(WPT.rumahsakit));
   if (w.sh && w.sh.e > Date.now() && jobOf(w.job)) {
     const t = WPT[jobOf(w.job).wp]; a.wk = w.job;
     if (t && t.length) return near(t) && Math.random() < .6 ? stay(3000 + Math.random() * 3000) : go(rnd(t));
@@ -450,6 +489,7 @@ HX.pick = function (a, now) {
   const r = Math.random();
   if (r < .12 && TWK.length) return go(rnd(TWK));
   if (r < .2 && POD.length) return go(rnd(POD));
+  if (r < .27) { const sh = POL.filter(o => SHOP[o.k]); if (sh.length && WPT[rnd(sh).k]) { const s = rnd(sh); return near(WPT[s.k]) ? stay(2500 + Math.random() * 2500) : go(rnd(WPT[s.k])); } }
   return false;
 };
 
@@ -466,6 +506,7 @@ HX.ag = function (a, x, y) {
   if (a.dm && HX.actIds[a.dm.id] && (a.k === "d" || a.k === "r")) placard(x, y, a.dm, t, a);
   if (a.role === "hat") { ctx.fillStyle = "#e8cf6a"; ctx.beginPath(); ctx.ellipse(x, y - 27, 9, 2.4, 0, 0, 7); ctx.fill(); poly([x - 6, y - 27, x, y - 36, x + 6, y - 27], "#e8cf6a"); }
   else if (a.role === "helm") { ctx.fillStyle = "#f2c230"; ctx.beginPath(); ctx.arc(x, y - 27, 5.6, Math.PI, 0); ctx.fill(); ctx.fillRect(x - 6.5, y - 27, 13, 1.6); cir(x, y - 31, 1.4, "#fff7c0"); }
+  if (a.k === "r") { const w = S.warga[a.u]; if (w) { const e = (w.rwt && w.rwt.u > Date.now()) ? "🏥" : w.sk ? "🤒" : (a.buy ? a.buy.it.e : (w.hs != null && w.hs < 25) ? "🥤" : (w.kn != null && w.kn < 25) ? "🍙" : ""); if (e) { ctx.font = "12px sans-serif"; ctx.textAlign = "center"; ctx.fillText(e, x, y - 56 + Math.sin(t / 300) * 2); } } }
   if (a.k === "r" && a.wk && a.mode !== "in") { const j = jobOf(a.wk); if (j) { ctx.font = "12px sans-serif"; ctx.textAlign = "center"; ctx.fillText(j.e, x, y - 44 + Math.sin(t / 300) * 2); } }
 };
 
@@ -476,7 +517,10 @@ HX.ag = function (a, x, y) {
     ".jc{border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;background:rgba(255,255,255,.45)}.jc.on{border:2px solid var(--ok)}" +
     ".pbar{height:12px;border-radius:8px;background:rgba(0,0,0,.14);overflow:hidden;margin:6px 0}.pbar i{display:block;height:100%;background:var(--ok);transition:width 1s linear}" +
     ".bub{display:inline-block;max-width:82%;padding:5px 10px;border-radius:14px;background:rgba(255,255,255,.75);text-align:left}.bub.me{background:var(--acc);color:#fff}.bub b{font-size:12px}.bub small{opacity:.65;margin-left:6px;font-size:10px}" +
-    ".tag{display:inline-block;border-radius:8px;padding:0 8px;font-size:12px;font-weight:700;color:#fff;margin-right:4px}";
+    ".tag{display:inline-block;border-radius:8px;padding:0 8px;font-size:12px;font-weight:700;color:#fff;margin-right:4px}" +
+    ".hbrow{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:14px}.hbrow>span{width:132px}.hbrow b{width:44px;text-align:right}.hb{flex:1;height:12px;border-radius:8px;background:rgba(0,0,0,.14);overflow:hidden}.hb i{display:block;height:100%;transition:width .8s}" +
+    ".bub.dr{background:#dff5ea;border:1px solid #9bd6b5}" +
+    "#hud{position:absolute;left:10px;top:64px;z-index:5;display:none;background:rgba(255,255,255,.78);border-radius:12px;padding:5px 8px;font-size:12px;cursor:pointer;backdrop-filter:blur(6px);box-shadow:0 2px 8px rgba(0,0,0,.15)}#hud span{display:flex;align-items:center;gap:5px;margin:2px 0}#hud i{display:block;width:54px;height:7px;border-radius:5px;background:rgba(0,0,0,.15);overflow:hidden}#hud i b{display:block;height:100%}";
   document.head.appendChild(st);
 })();
 
@@ -488,10 +532,10 @@ window.addEventListener("load", function () {
 
   /* ---------- tab baru ---------- */
   const nav = $("#nav"), adm = nav.querySelector('[data-t="admin"]');
-  [["demo", "📣", "Demo"], ["kerja", "💼", "Kerja"], ["obrol", "💬", "Obrolan"]].forEach(a => {
+  [["demo", "📣", "Demo"], ["kerja", "💼", "Kerja"], ["sehat", "🩺", "Sehat"], ["obrol", "💬", "Obrolan"]].forEach(a => {
     const b = document.createElement("button"); b.dataset.t = a[0]; b.innerHTML = "<span>" + a[1] + "</span>" + a[2]; nav.insertBefore(b, adm);
   });
-  const TABS = { demo: vDemo, kerja: vKerja, obrol: vObrol };
+  const TABS = { demo: vDemo, kerja: vKerja, sehat: vSehat, obrol: vObrol };
   const prevRender = window.render;
   window.render = function () {
     if (tab !== "obrol") HX.cur = "";
@@ -516,7 +560,7 @@ window.addEventListener("load", function () {
     else { const x = locDM().find(q => q.id === id); if (x) { x.dukung = (x.dukung || []).filter(u => u !== me); if (on) x.dukung.push(me); } HX.DM = S.demos; save(); }
   }
   const mEmo = m => m >= 80 ? "😊" : m >= 55 ? "😐" : m >= 30 ? "😠" : "😡";
-  const TARGETS = () => ["Kota secara umum"].concat(LML.map(o => o.n), POL.map(o => o.n), ["Taman Tugu Rebahan", "Persawahan Rebahan", "Peternakan Rebahan", "Tambang Rebahan", "Bandara Rebahan", "Pasar Rebahan", "Pelabuhan"]);
+  const TARGETS = () => ["Kota secara umum"].concat(LML.map(o => o.n), POL.map(o => o.n), ["Taman Tugu Rebahan", "Rumah Sakit Rebahan", "Persawahan Rebahan", "Peternakan Rebahan", "Tambang Rebahan", "Bandara Rebahan", "Pasar Rebahan", "Pelabuhan"]);
 
   function demoCard(d, adm) {
     const n = (d.dukung || []).length, mine = (d.dukung || []).includes(me), on = isActive(d);
@@ -591,6 +635,9 @@ window.addEventListener("load", function () {
       } else if (a[0] === "mulai") {
         const j = jobOf(w2.job); if (!j) return; const d2 = new Date().toDateString();
         if (w2.sd !== d2) { w2.sd = d2; w2.sn = 0; }
+        if (w2.rwt && w2.rwt.u > Date.now()) return err("Kamu sedang dirawat di Rumah Sakit.");
+        if (w2.sk) return err("Kamu sedang sakit (" + w2.sk.n + "). Periksa ke Rumah Sakit di tab Sehat dulu.");
+        if (w2.hs != null && (w2.hs <= 0 || w2.kn <= 0)) return err("Kamu terlalu lapar/haus untuk bekerja. Makan atau minum dulu (tab Sehat).");
         if (w2.sn >= MAXS) return err("Jatah shift hari ini habis. Istirahat dulu, besok lanjut.");
         if (w2.sh && w2.sh.e > Date.now()) return;
         w2.sn++; w2.sh = { s: Date.now(), e: Date.now() + j.d * 1000, g: Math.round(j.g * MULT[rankOf(w2)]) }; save(); poke(); vKerja();
@@ -691,6 +738,326 @@ window.addEventListener("load", function () {
     if (ch) save();
   }, 5000);
 
+  /* =====================================================================
+     SEHAT: darah, kenyang (lapar), segar (haus), toko, rumah sakit, dokter
+     - Data kesehatan disimpan di data warga (S.warga[u]) di perangkat pemain
+     - Konsultasi dokter real-time lewat ruang obrolan "dr_<username>"
+     - Antrean pasien lewat koleksi Firestore "rs" (atau lokal bila offline)
+     - 1 "hari" rawat inap = HARI_RS milidetik (supaya cepat dimainkan)
+     ===================================================================== */
+  const HARI_RS = 180000;                    /* 1 hari rawat = 3 menit nyata (ubah di sini) */
+  const BIAYA_KONSUL = 15, BIAYA_RAWAT = 25; /* koin; kalau koin kurang, ditanggung kota */
+  const ITEMS = [
+    { id: "air",     n: "Air mineral",         e: "💧", p: 5,  k: "minum", h: 38, s: 1 },
+    { id: "teh",     n: "Es teh manis",        e: "🧋", p: 8,  k: "minum", h: 45, l: 5, s: 1 },
+    { id: "jus",     n: "Jus buah segar",      e: "🥤", p: 12, k: "minum", h: 55, hp: 2, s: 2 },
+    { id: "roti",    n: "Roti isi",            e: "🥪", p: 8,  k: "makan", l: 30, s: 1 },
+    { id: "mie",     n: "Mie instan",          e: "🍜", p: 10, k: "makan", l: 42, h: -5, s: 1 },
+    { id: "nasi",    n: "Nasi bungkus",        e: "🍱", p: 15, k: "makan", l: 58, s: 2 },
+    { id: "komplit", n: "Paket sehat komplit", e: "🥗", p: 28, k: "makan", l: 80, h: 15, hp: 6, s: 2 },
+    { id: "vit",     n: "Vitamin C",           e: "💊", p: 18, k: "obat",  hp: 12, s: 1 }
+  ];
+  const PEN = [{ n: "Flu", s: 1 }, { n: "Demam", s: 1 }, { n: "Sakit kepala", s: 1 }, { n: "Radang tenggorokan", s: 1 }, { n: "Tifus ringan", s: 2 }];
+  const NPC_DR = "dr.jaga";
+  const DRN = "dr. Jaga (dokter jaga RS Rebahan)";
+  const rsDoc = u => { const d = DBX(); return d ? d.doc("rs/" + u) : null; };
+  HX.RS = Object.values(S.rs || {});
+  const pc = v => Math.round(clamp(v, 0, 100));
+  const barCol = v => v >= 60 ? "#2fb36a" : v >= 30 ? "#f0a828" : "#e0463c";
+  const isDokter = w => !!(w && w.job === "dokter");
+
+  function hInit(w) {
+    if (w.hp == null) { w.hp = 100; w.kn = 85; w.hs = 85; w.ht = Date.now(); }
+    if (w.kn == null) w.kn = 85; if (w.hs == null) w.hs = 85; if (!w.ht) w.ht = Date.now();
+    return w;
+  }
+  const rawatAktif = w => !!(w && w.rwt && w.rwt.u > Date.now());
+  const sakitNow = w => !!(w && w.sk);
+  function nearestShop(w, kind) {
+    const L = w && lots[w.lot]; const from = L || [0, 0];
+    return POL.filter(o => SHOP[o.k])
+      .map(o => ({ o, d: Math.hypot(o.i - from[0], o.j - from[1]) })).sort((a, b) => a.d - b.d);
+  }
+  const sells = (shopK, it) => shopK === "supermarket" || (it.s === 1);
+
+  /* ---------- mesin waktu kesehatan ---------- */
+  function sickOnset(w, cause) {
+    let p = cause === "haus" ? { n: "Dehidrasi", s: 1 } : cause === "lapar" ? { n: "Maag", s: 1 } : PEN[Math.floor(Math.random() * PEN.length)];
+    w.sk = { n: p.n, s: p.s, t: Date.now(), cause: cause || "umum" };
+    log("🤒 @" + w.u + " jatuh sakit: " + p.n); toast("🤒 Kamu sakit: " + p.n + ". Periksa ke Rumah Sakit di tab Sehat.");
+  }
+  function pingsan(w) {
+    w.hp = 20; w.sk = w.sk || { n: "Kelelahan berat", s: 3, t: Date.now(), cause: "pingsan" };
+    startRawat(w, 1, "Tim ambulans RS Rebahan", true);
+    log("🚑 @" + w.u + " pingsan dan dibawa ambulans ke Rumah Sakit"); toast("🚑 Kamu pingsan! Ambulans membawamu ke Rumah Sakit.");
+    const a = AG[w.u]; if (a) a.until = 0;
+  }
+  function healthTick(w) {
+    hInit(w); const now = Date.now(), m = Math.min(now - w.ht, 30 * 60e3) / 60e3; w.ht = now; if (m <= 0) return;
+    const inRs = rawatAktif(w), work = !!(w.sh && w.sh.e > now), mult = work ? 1.6 : 1;
+    if (w.rwt && !inRs) { selesaiRawat(w); return; }
+    w.kn = clamp(w.kn - m * (inRs ? .3 : .9) * mult, 0, 100);
+    w.hs = clamp(w.hs - m * (inRs ? .5 : 1.4) * mult, 0, 100);
+    if (inRs) { w.kn = Math.max(w.kn, 55); w.hs = Math.max(w.hs, 55); w.hp = clamp(w.hp + m * 5, 0, 100); return; }
+    let d = 0; if (w.kn <= 0) d -= 2; if (w.hs <= 0) d -= 2; if (w.sk) d -= 1.2;
+    if (!d && w.kn >= 50 && w.hs >= 50 && !w.sk) d = 1.2;
+    w.hp = clamp(w.hp + d * m, 0, 100);
+    if (!w.sk) {
+      const risk = (w.hs < 15 ? .12 : 0) + (w.kn < 15 ? .10 : 0) + (w.hp < 45 ? .08 : 0) + .004;
+      if (Math.random() < 1 - Math.pow(1 - risk, m)) sickOnset(w, w.hs < 15 ? "haus" : w.kn < 15 ? "lapar" : "umum");
+    }
+    if (w.hp <= 0) pingsan(w);
+  }
+  function selesaiRawat(w) {
+    const dr = w.rwt && w.rwt.dr; w.rwt = null; w.sk = null; w.hp = Math.max(w.hp || 0, 85); w.kn = Math.max(w.kn, 70); w.hs = Math.max(w.hs, 70);
+    log("✅ @" + w.u + " sembuh dan pulang dari Rumah Sakit"); toast("✅ Kamu sudah sembuh dan boleh pulang. Jaga makan & minum ya!");
+    const r = rsDoc(w.u); if (r) r.set({ u: w.u, st: "pulang", t: Date.now() }, { merge: true }).catch(() => {}); else if (S.rs && S.rs[w.u]) S.rs[w.u].st = "pulang";
+    chatSend("dr_" + w.u, { k: "sys", u: NPC_DR, tx: "✅ @" + w.u + " dinyatakan sembuh dan pulang. " + (dr ? "(" + dr + ")" : "") }).catch(() => {});
+    save(); const a = AG[w.u]; if (a) a.until = 0; softS();
+  }
+  function startRawat(w, days, drName, free) {
+    const cost = free ? 0 : BIAYA_RAWAT * days, bayar = (w.coin || 0) >= cost ? cost : 0;
+    w.coin = (w.coin || 0) - bayar; w.sh = null;
+    w.rwt = { u: Date.now() + days * HARI_RS, h: days, dr: drName, t0: Date.now(), paid: bayar, gratis: bayar < cost || free };
+    log("🏥 @" + w.u + " dirawat " + days + " hari di Rumah Sakit (" + drName + ")");
+    toast("🏥 Dirawat " + days + " hari" + (bayar ? " · biaya " + bayar + " 🪙" : " · ditanggung kota")); save(); const a = AG[w.u]; if (a) a.until = 0;
+  }
+
+  /* ---------- beli makan / minum ---------- */
+  function applyItem(w, it) {
+    w.kn = clamp((w.kn == null ? 85 : w.kn) + (it.l || 0), 0, 100); w.hs = clamp((w.hs == null ? 85 : w.hs) + (it.h || 0), 0, 100); w.hp = clamp((w.hp == null ? 100 : w.hp) + (it.hp || 0), 0, 100);
+    if (w.sk && w.sk.cause === "haus" && w.hs > 50) { w.sk = null; toast("💧 Dehidrasi teratasi"); }
+    if (w.sk && w.sk.cause === "lapar" && w.kn > 50) { w.sk = null; toast("🍙 Maag mereda"); }
+    save();
+  }
+  function buyItem(it, shopK, auto) {
+    const w = wk(); if (!w || w.status !== "warga") return "Hanya warga resmi.";
+    hInit(w); if (rawatAktif(w)) return "Kamu sedang dirawat. Makanan & minuman sudah disediakan RS.";
+    if ((w.coin || 0) < it.p) return "Koin tidak cukup (butuh " + it.p + " 🪙).";
+    const shop = POL.find(o => o.k === shopK); if (!shop) return "Toko tidak ditemukan.";
+    if (!sells(shopK, it)) return shop.n + " tidak menjual " + it.n + ".";
+    if (AG[me] && AG[me].buy) return "Kamu masih dalam perjalanan membeli sesuatu.";
+    w.coin -= it.p; save();
+    toast((auto ? "🤖 " : "🛒 ") + "Menuju " + shop.n + " untuk beli " + it.n + "...");
+    const done = () => { const ww = wk(); if (!ww) return; const a = AG[me]; if (a) a.buy = null; applyItem(ww, it); toast(it.e + " " + it.n + " dikonsumsi " + (it.k === "minum" ? "· glek glek" : it.k === "makan" ? "· nyam nyam" : "")); softS(); };
+    const a = AG[me]; if (a) { a.buy = { k: shopK, it, done, t: Date.now() }; a.until = 0; setTimeout(() => { if (a.buy && a.buy.done === done) done(); }, 15000); } else done();
+    return "";
+  }
+  function autoBeli(w) {
+    if (w.auto === false || rawatAktif(w) || (AG[me] && AG[me].buy)) return;
+    const need = w.hs < 25 ? "minum" : w.kn < 25 ? "makan" : null; if (!need) return;
+    const list = ITEMS.filter(i => i.k === need && i.p <= (w.coin || 0)).sort((a, b) => a.p - b.p); if (!list.length) return;
+    const it = need === "minum" ? list[0] : list[Math.min(1, list.length - 1)];
+    for (const s of nearestShop(w)) { if (sells(s.o.k, it)) { buyItem(it, s.o.k, true); return; } }
+  }
+
+  /* ---------- konsultasi dokter ---------- */
+  let drOff = null, drStage = {}, drTimers = [], rsOff = null, rsMe = null, myRsOff = null;
+  const clearTimers = () => { drTimers.forEach(clearTimeout); drTimers = []; };
+  const later = (ms, f) => drTimers.push(setTimeout(f, ms));
+  const room = u => "dr_" + u;
+  async function sayDr(u, tx, npc, extra) { try { await chatSend(room(u), Object.assign({ k: "msg", u: npc ? NPC_DR : me, r: "d", npc: npc ? 1 : 0, tx }, extra || {})); } catch (e) {} }
+  async function saveRs(rec) {
+    const r = rsDoc(rec.u); if (r) { try { await r.set(rec, { merge: true }); } catch (e) {} } else { S.rs = S.rs || {}; S.rs[rec.u] = Object.assign(S.rs[rec.u] || {}, rec); HX.RS = Object.values(S.rs); save(); }
+  }
+  function npcDecide(w) {
+    if (!w || drStage[w.u] === "decided") return; drStage[w.u] = "decided";
+    const s = (w.sk && w.sk.s) || 1, hp = w.hp || 0, ringan = hp >= 70 && !w.sk;
+    if (ringan) {
+      sayDr(w.u, "Hasil pemeriksaan: kondisi Anda cukup baik, tidak perlu rawat inap. Saya resepkan vitamin dan istirahat. Pastikan makan teratur dan cukup minum ya.", true);
+      w.hp = clamp(w.hp + 10, 0, 100); w.sk = null; saveRs({ u: w.u, st: "rawatjalan", hari: 0, dr: NPC_DR, dec: Date.now(), t: Date.now() }); save(); softS(); return;
+    }
+    const days = hp < 25 ? 3 : (hp < 50 || s > 1) ? 2 : 1;
+    sayDr(w.u, "Keputusan saya: Anda perlu rawat inap selama " + days + " hari (±" + Math.round(days * HARI_RS / 60000) + " menit waktu nyata). Selama dirawat, makan & minum ditanggung rumah sakit. Silakan beristirahat, dan boleh mengobrol dengan saya di sini kapan saja.", true);
+    startRawat(w, days, DRN);
+    saveRs({ u: w.u, st: "dirawat", hari: days, dr: NPC_DR, dec: Date.now(), t: Date.now() }); softS();
+  }
+  function npcAssess(w) {
+    if (!w || drStage[w.u] !== "new") return; drStage[w.u] = "assessed";
+    sayDr(w.u, "Saya sudah cek data Anda: darah " + pc(w.hp) + "%, kenyang " + pc(w.kn) + "%, segar " + pc(w.hs) + "%." + (w.sk ? " Dugaan saya: " + w.sk.n + "." : " Tidak ada penyakit serius terdeteksi.") + " Ada keluhan tambahan?", true);
+    later(8000, () => npcDecide(wk()));
+  }
+  function npcFlow(w) {
+    drStage[w.u] = "new"; clearTimers();
+    later(1200, () => sayDr(w.u, "Selamat datang di RS Rebahan, @" + w.u + ". Saya dr. Jaga. Boleh ceritakan keluhan Anda?", true));
+    later(6000, () => npcAssess(wk()));
+  }
+  const KW = [
+    [/pusing|kepala/, "Pusing bisa karena kurang cairan atau kurang istirahat. Minum air putih dan tidur cukup ya."],
+    [/demam|panas|meriang/, "Demam tandanya tubuh sedang melawan infeksi. Kami pantau suhu dan beri obat penurun panas."],
+    [/mual|muntah|perut|maag/, "Keluhan perut biasanya terkait telat makan. Jangan lupa makan teratur, hindari yang pedas dulu."],
+    [/haus|minum|dehidrasi/, "Cairan Anda sangat penting. Selama di sini minum disediakan, dan nanti beli minum di toko terdekat."],
+    [/lapar|makan/, "Makanan rumah sakit sudah disiapkan untuk pasien. Kalau sudah pulang, beli makan di supermarket atau minimarket terdekat."],
+    [/lemas|capek|lelah/, "Lemas wajar kalau tubuh kekurangan energi. Istirahat total dulu, jangan bekerja sebelum pulih."],
+    [/pulang|boleh pulang|kapan/, null], [/terima kasih|makasih|thanks/, "Sama-sama. Cepat sembuh, @USER!"]
+  ];
+  function npcReply(w, tx) {
+    const st = drStage[w.u], rem = rawatAktif(w) ? Math.max(1, Math.ceil((w.rwt.u - Date.now()) / 60000)) : 0;
+    let out = null; const low = tx.toLowerCase();
+    for (const [re, r] of KW) if (re.test(low)) { out = r === null ? (rem ? "Masih perlu observasi. Sisa waktu rawat sekitar " + rem + " menit lagi, mohon bersabar." : "Setelah pemeriksaan selesai, Anda boleh pulang.") : r.replace("@USER", "@" + w.u); break; }
+    if (!out) out = st === "decided" ? ["Baik, saya catat. Tetap istirahat ya.", "Terima kasih infonya. Tim perawat akan memantau Anda.", "Tenang, kondisi Anda terus membaik."][Math.floor(Math.random() * 3)] : "Terima kasih, saya catat keluhan itu.";
+    later(1400, () => sayDr(w.u, out, true));
+    if (st === "new") later(2600, () => npcAssess(wk()));
+    else if (st === "assessed") later(4200, () => npcDecide(wk()));
+  }
+  async function mintaPeriksa() {
+    const w = wk(); if (!w || w.status !== "warga") return;
+    hInit(w); if (rawatAktif(w)) { openDr(); return; }
+    const fee = (w.coin || 0) >= BIAYA_KONSUL ? BIAYA_KONSUL : 0; w.coin -= fee; w.cs = { t: Date.now(), fee }; save();
+    await saveRs({ u: w.u, kel: w.sk ? w.sk.n : "Cek kesehatan", st: "menunggu", t: Date.now(), hp: pc(w.hp), kn: pc(w.kn), hs: pc(w.hs), dr: "", dec: 0 });
+    chatSend(room(w.u), { k: "sys", u: NPC_DR, tx: "🩺 @" + w.u + " mendaftar periksa" + (fee ? " (biaya " + fee + " 🪙)" : " (gratis)") }).catch(() => {});
+    log("🩺 @" + w.u + " memeriksakan diri ke Rumah Sakit");
+    const humanDr = DBX() && Object.values(S.warga).some(x => x.status === "warga" && x.job === "dokter" && x.u !== w.u);
+    if (!humanDr) npcFlow(w);
+    else { drStage[w.u] = "wait"; clearTimers(); later(25000, () => { const ww = wk(); if (ww && drStage[ww.u] === "wait") { sayDr(ww.u, "Dokter sedang menangani pasien lain, saya dokter jaga yang mengambil alih.", true); npcFlow(ww); } }); }
+    openDr(); softS();
+  }
+  function renderDr(L) {
+    const b = $("#dcb"); if (!b) return; const w = wk();
+    if (w && drStage[w.u] === "wait" && L.some(m => m.r === "d" && !m.npc && m.u !== me)) { drStage[w.u] = "human"; clearTimers(); }
+    b.innerHTML = L.map(m => {
+      if (m.k === "sys") return `<div class="m s">${esc(m.tx)}</div>`;
+      const mine = m.u === me, dr = m.r === "d", tm = new Date(m.t).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }).replace(".", ":");
+      return `<div class="m" style="text-align:${mine ? "right" : "left"}"><span class="bub${mine ? " me" : dr ? " dr" : ""}"><b>${mine ? "kamu" : dr ? "🩺 " + (m.npc ? "dr. Jaga" : "dr. @" + esc(m.u)) : "@" + esc(m.u)}</b><br>${esc(m.tx)}<small>${tm}</small></span></div>`;
+    }).join("") || `<div class="m s">Belum ada percakapan. Tulis keluhanmu untuk dokter.</div>`;
+    b.scrollTop = b.scrollHeight;
+  }
+  function openDr(target) {
+    const pu = target || me; if (!pu) return; if (drOff) { drOff(); drOff = null; }
+    const box = $("#dcw"); if (!box) return;
+    box.innerHTML = `<h3>💬 Ruang konsultasi · ${pu === me ? "kamu & dokter" : "pasien @" + esc(pu)}</h3><div class="chatbox" id="dcb" style="height:34vh"></div>
+    <div style="display:flex;gap:6px"><input id="dct" maxlength="200" placeholder="${pu === me ? "Tulis keluhanmu..." : "Balas pasien..."}" autocomplete="off"><button class="btn" id="dcs">Kirim</button></div><div class="err" id="dce"></div>`;
+    drOff = chatSub(room(pu), renderDr);
+    const send = async () => {
+      const i = $("#dct"), tx = i.value.trim(); if (!tx) return; i.value = "";
+      try {
+        if (pu === me) { await chatSend(room(pu), { k: "msg", u: me, r: "p", tx }); const w = wk(); if (w && !isDokter(w) && drStage[w.u] && drStage[w.u] !== "wait" && drStage[w.u] !== "human") npcReply(w, tx); }
+        else await chatSend(room(pu), { k: "msg", u: me, r: "d", tx });
+        const e = $("#dce"); if (e) e.textContent = "";
+      } catch (e) { const el = $("#dce"); if (el) el.textContent = ERRW; }
+    };
+    $("#dcs").onclick = send; $("#dct").onkeydown = e => { if (e.key === "Enter") send(); };
+  }
+  function dokterTetapkan(pu, mode, days) {
+    const rec = (HX.RS || []).find(r => r.u === pu); if (!rec) return;
+    const patch = { st: mode === "rawat" ? "dirawat" : "rawatjalan", hari: mode === "rawat" ? days : 0, dr: me, dec: Date.now() };
+    saveRs(Object.assign({ u: pu }, patch));
+    const tx = mode === "rawat" ? "Hasil pemeriksaan: Anda harus dirawat inap " + days + " hari (±" + Math.round(days * HARI_RS / 60000) + " menit waktu nyata). Silakan istirahat di rumah sakit." : "Hasil pemeriksaan: tidak perlu rawat inap. Silakan pulang, minum obat dan istirahat.";
+    sayDr(pu, tx, false, { k: "msg" });
+    log("🩺 dr. @" + me + " menetapkan " + (mode === "rawat" ? "rawat inap " + days + " hari" : "rawat jalan") + " untuk @" + pu);
+    const pw = S.warga[pu]; if (pw && !DBX()) applyRs(pw, Object.assign({ u: pu }, patch));
+  }
+  function applyRs(w, r) {
+    if (!r || !r.dec || r.dec === w.rdec || r.dec < (w.cs ? w.cs.t : 0)) return; w.rdec = r.dec;
+    if (r.st === "dirawat" && !rawatAktif(w)) { startRawat(w, Math.max(1, +r.hari || 1), "dr. @" + (r.dr || "dokter")); clearTimers(); drStage[w.u] = "decided"; }
+    else if (r.st === "rawatjalan") { w.sk = null; w.hp = clamp((w.hp || 0) + 10, 0, 100); clearTimers(); drStage[w.u] = "decided"; toast("🩺 Dokter: rawat jalan, istirahat & minum obat."); save(); }
+    softS();
+  }
+  function bindDb() {
+    const d = DBX(); if (!d || !me) return;
+    if (rsMe !== me) {
+      if (myRsOff) myRsOff(); rsMe = me;
+      myRsOff = d.doc("rs/" + me).onSnapshot(x => { const w = wk(); if (x.exists && w) applyRs(w, x.data()); }, () => {});
+      if (rsOff) rsOff();
+      rsOff = d.collection("rs").orderBy("t", "desc").limit(40).onSnapshot(s => { HX.RS = s.docs.map(x => Object.assign({ u: x.id }, x.data())); softS(); }, () => {});
+    }
+  }
+  const typing = () => document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+
+  /* ---------- tampilan tab Sehat ---------- */
+  const bar = (lbl, v, hint) => `<div class="hbrow"><span>${lbl}</span><div class="hb"><i style="width:${pc(v)}%;background:${barCol(v)}"></i></div><b style="color:${barCol(v)}">${pc(v)}%</b></div>${hint ? `<small class="mut">${hint}</small>` : ""}`;
+  let shopSel = "", cekMsg = "";
+  function topHtml(w) {
+    hInit(w); const inRs = rawatAktif(w); const sh = nearestShop(w); if (!shopSel || !sh.find(s => s.o.k === shopSel)) shopSel = sh[0] ? sh[0].o.k : "";
+    const so = POL.find(o => o.k === shopSel), dist = sh.find(s => s.o.k === shopSel);
+    let st = inRs ? `🏥 <b>Dirawat</b> · sisa ${Math.max(1, Math.ceil((w.rwt.u - Date.now()) / 1000))} detik · ${w.rwt.h} hari oleh ${esc(w.rwt.dr)}` : w.sk ? `🤒 <b>Sakit: ${esc(w.sk.n)}</b> · tidak bisa bekerja` : (w.hp < 40 || w.kn < 25 || w.hs < 25) ? "⚠️ <b>Perlu perhatian</b>" : "😊 <b>Sehat</b>";
+    let h = `<h2>🩺 Sehat</h2><p><b>🪙 ${w.coin || 0} koin</b> · ${st}</p>
+    <div class="jc">${bar("❤️ Darah", w.hp)}${bar("🍗 Kenyang <small>(lapar)</small>", w.kn)}${bar("💧 Segar <small>(haus)</small>", w.hs)}</div>`;
+    if (inRs) {
+      const tot = w.rwt.u - w.rwt.t0, pr = clamp(100 - (w.rwt.u - Date.now()) / tot * 100, 0, 100), hk = Math.min(w.rwt.h, Math.floor(pr / 100 * w.rwt.h) + 1);
+      h += `<div class="jc on"><b>🛏 Rawat inap</b> · hari ke-${hk} dari ${w.rwt.h}<div class="pbar"><i style="width:${pr}%"></i></div><small>Makan & minum ditanggung RS. Darah naik perlahan. Kamu pulang otomatis saat waktunya habis. ${w.rwt.gratis ? "Biaya ditanggung kota." : "Biaya " + w.rwt.paid + " 🪙."}</small></div>`;
+    } else {
+      h += `<div><button class="btn g" data-x="periksa">🏥 Periksa ke Rumah Sakit</button> <button class="btn s" data-x="cek">🔍 Cek kesehatan (gratis)</button></div>
+      <small class="mut">Konsultasi ${BIAYA_KONSUL} 🪙 · rawat inap ${BIAYA_RAWAT} 🪙/hari (1 hari rawat = ${Math.round(HARI_RS / 60000)} menit nyata). Koin kurang? Ditanggung kota.</small>`;
+      if (cekMsg) h += `<div class="jc">${cekMsg}</div>`;
+    }
+    if (!inRs) {
+      const its = ITEMS.map(it => { const ok = so && sells(so.k, it); return `<div class="jc"><b>${it.e} ${it.n}</b> · ${it.p} 🪙<br><small>${[it.l ? "🍗 +" + it.l : "", it.h ? "💧 " + (it.h > 0 ? "+" : "") + it.h : "", it.hp ? "❤️ +" + it.hp : ""].filter(Boolean).join(" · ")}</small><br><button class="btn s" data-x="beli|${it.id}" ${!ok || (w.coin || 0) < it.p ? "disabled" : ""}>${!ok ? "Tidak dijual di sini" : "Beli"}</button></div>`; }).join("");
+      h += `<h3>🛍 Beli makan & minum</h3><p class="mut">Toko terdekat dari rumahmu: <b>${dist ? esc(dist.o.n) : "-"}</b> (${dist ? Math.round(dist.d) : "?"} petak). Karaktermu akan berjalan ke sana.</p>
+      <div>${sh.map(s => `<button class="btn s${s.o.k === shopSel ? " g" : ""}" data-x="toko|${s.o.k}">${esc(s.o.n.replace(" Rebahan", ""))} · ${Math.round(s.d)}</button>`).join("")}</div>
+      <label class="mut"><input type="checkbox" id="hauto" ${w.auto === false ? "" : "checked"}> 🤖 Beli otomatis di toko terdekat saat lapar/haus (koin cukup)</label>${its}`;
+    }
+    return h + `<div class="err" id="hse"></div>`;
+  }
+  function docHtml() {
+    const w = wk(), list = (HX.RS || []).filter(r => r.st === "menunggu" || r.st === "dirawat").sort((a, b) => (b.t || 0) - (a.t || 0));
+    return `<h3>🩺 Ruang Dokter</h3><p class="mut">Pasien yang masuk RS Rebahan. Buka percakapan, lalu tetapkan lama rawat inap.</p>` + (list.length ? list.map(r => `<div class="jc"><b>@${esc(r.u)}</b> · ${esc(r.kel || "")} · <span class="mut">${r.st === "menunggu" ? "⏳ menunggu dokter" : "🛏 dirawat " + (r.hari || 0) + " hari"}</span><br><small>❤️ ${r.hp ?? "?"}% · 🍗 ${r.kn ?? "?"}% · 💧 ${r.hs ?? "?"}%</small><br>
+      <button class="btn s" data-x="buka|${esc(r.u)}">💬 Buka percakapan</button>
+      <select id="hd-${esc(r.u)}">${[1, 2, 3, 4, 5, 6, 7].map(n => `<option value="${n}">${n} hari</option>`).join("")}</select>
+      <button class="btn g s" data-x="rawat|${esc(r.u)}">🏥 Rawat inap</button><button class="btn s" data-x="jalan|${esc(r.u)}">🏠 Rawat jalan</button></div>`).join("") : `<p class="mut">Belum ada pasien. Rumah sakit sepi.</p>`);
+  }
+  function vSehat() {
+    const w = wk(), st = sheet.scrollTop;
+    if (!w || w.status !== "warga") { sheet.innerHTML = `<h2>🩺 Sehat</h2><p>Hanya warga resmi yang punya data kesehatan. Daftar dan kirim kode ke bot dulu (tab Daftar).</p>`; sheet.onclick = null; return; }
+    const cs = (S.rs && S.rs[w.u]) || (HX.RS || []).find(r => r.u === w.u);
+    const showChat = drTarget || rawatAktif(w) || (cs && (cs.st === "menunggu" || cs.st === "dirawat"));
+    if (drOff) { drOff(); drOff = null; }
+    sheet.innerHTML = `<div id="hst">${topHtml(w)}</div><div id="dcw"></div>${(isDokter(w) || isAdmin) ? `<div id="hdoc">${docHtml()}</div>` : ""}`;
+    if (showChat) openDr(drTarget || me);
+    sheet.scrollTop = st; bindSheet(); const ck = $("#hauto"); if (ck) ck.onchange = () => { const ww = wk(); ww.auto = ck.checked; save(); };
+  }
+  const softS = () => { if (tab !== "sehat") return; if (typing()) refreshTop(); else vSehat(); };
+  let drTarget = null;
+  function bindSheet() {
+    sheet.onclick = async e => {
+      const a = (e.target.dataset.x || "").split("|"), w = wk(); if (!a[0] || !w) return; const he = t => { const el = $("#hse"); if (el) el.textContent = t; };
+      if (a[0] === "periksa") { drTarget = null; await mintaPeriksa(); }
+      else if (a[0] === "cek") {
+        hInit(w); const adv = []; if (w.hs < 40) adv.push("💧 Kamu mulai dehidrasi, minum dulu."); if (w.kn < 40) adv.push("🍗 Perutmu kosong, segera makan."); if (w.hp < 60) adv.push("❤️ Darahmu rendah, istirahat & makan bergizi."); if (w.sk) adv.push("🤒 Kamu sakit " + w.sk.n + ", sebaiknya periksa ke dokter.");
+        const sc = (w.hp + w.kn + w.hs) / 3; cekMsg = `<b>🔍 Hasil cek kesehatan:</b> ${sc >= 75 ? "Prima 😊" : sc >= 45 ? "Cukup 😐" : "Perlu perhatian 😟"}<br><small>${adv.length ? adv.join("<br>") : "Semua indikator baik. Pertahankan pola makan dan minum!"}</small>`; log("🔍 @" + w.u + " cek kesehatan"); vSehat();
+      }
+      else if (a[0] === "toko") { shopSel = a[1]; vSehat(); }
+      else if (a[0] === "beli") { const it = ITEMS.find(i => i.id === a[1]); const r = buyItem(it, shopSel); he(r); if (!r) vSehat(); }
+      else if (a[0] === "buka") { drTarget = a[1]; openDr(a[1]); }
+      else if (a[0] === "rawat") { const n = +($("#hd-" + a[1]) || {}).value || 1; dokterTetapkan(a[1], "rawat", n); }
+      else if (a[0] === "jalan") dokterTetapkan(a[1], "jalan", 0);
+    };
+  }
+  /* segarkan ringan: hanya bagian atas, obrolan tetap */
+  function refreshTop() {
+    const w = wk(); if (!w || w.status !== "warga" || tab !== "sehat" || typing()) return;
+    const t = $("#hst"); if (!t) return; const st = sheet.scrollTop; t.innerHTML = topHtml(w); sheet.scrollTop = st;
+    const ck = $("#hauto"); if (ck) ck.onchange = () => { const ww = wk(); ww.auto = ck.checked; save(); };
+    const hd = $("#hdoc"); if (hd && !typing()) hd.innerHTML = docHtml();
+  }
+  /* mini HUD di peta */
+  const hud = document.createElement("div"); hud.id = "hud"; $("#stage").appendChild(hud);
+  function hudUpd() {
+    const w = wk(); if (!w || w.status !== "warga" || tab !== "peta") { hud.style.display = "none"; return; }
+    hInit(w); hud.style.display = "block";
+    const m = (e, v) => `<span>${e}<i><b style="width:${pc(v)}%;background:${barCol(v)}"></b></i></span>`;
+    hud.innerHTML = m("❤️", w.hp) + m("🍗", w.kn) + m("💧", w.hs) + (rawatAktif(w) ? "<span>🏥</span>" : w.sk ? "<span>🤒</span>" : "");
+  }
+  hud.onclick = () => { const b = document.querySelector('#nav [data-t="sehat"]'); if (b) b.click(); };
+  const sbadge = () => {
+    const b = document.querySelector('#nav [data-t="sehat"]'); if (!b) return; const o = b.querySelector(".bdg"); if (o) o.remove();
+    const w = wk(); if (w && w.status === "warga" && (w.sk || w.hs < 25 || w.kn < 25 || w.hp < 35)) { const i = document.createElement("i"); i.className = "bdg"; i.textContent = "!"; b.appendChild(i); }
+  };
+  /* pemberitahuan pesan dokter */
+  let nOff = null, nMe = null, nLast = 0;
+  function watchDr() {
+    if (!me || nMe === me) return; if (nOff) nOff(); nMe = me; nLast = 0;
+    nOff = chatSub(room(me), L => { const m = L[L.length - 1]; if (!m) return; if (nLast && m.t > nLast && m.r === "d" && m.u !== me && tab !== "sehat") toast("🩺 " + (m.npc ? "dr. Jaga" : "dr. @" + m.u) + ": " + String(m.tx).slice(0, 44)); nLast = Math.max(nLast, m.t); });
+  }
+  /* detak kesehatan */
+  let sv = 0;
+  setInterval(() => {
+    bindDb(); watchDr(); const w = wk(); if (!w || w.status !== "warga") { hudUpd(); return; }
+    healthTick(w); autoBeli(w); if (++sv % 6 === 0) save();
+    hudUpd(); sbadge(); refreshTop();
+  }, 5000);
+  setTimeout(() => { const w = wk(); if (w && w.status === "warga") { hInit(w); healthTick(w); } hudUpd(); }, 1500);
+
   /* ---------- PANEL WALIKOTA ---------- */
   const oAdmin = window.vAdmin;
   window.vAdmin = function () {
@@ -707,6 +1074,7 @@ window.addEventListener("load", function () {
       <div class="err" id="hxe"></div>
       <p><b>💼 Lowongan kerja</b> <span class="mut">(kuota per jabatan)</span></p>
       ${JOBS.map(j => `<div class="row"><span>${j.e} ${esc(j.n)}<br><small>terisi ${cnt(j.id)}/${kuota(j)}</small></span><span><button class="btn s" data-x="kq|${j.id}|-1">−</button><button class="btn s" data-x="kq|${j.id}|1">+</button></span></div>`).join("")}
+      <p><b>🏥 Rumah Sakit Rebahan</b> <span class="mut">· dirawat ${(HX.RS || []).filter(r => r.st === "dirawat").length} · menunggu ${(HX.RS || []).filter(r => r.st === "menunggu").length} · dokter bertugas ${cnt("dokter")}</span></p>
       <p><b>💡 Lampu jalan</b> <span class="mut">(otomatis: nyala malam, padam pagi)</span></p>
       <div>${lampB.map(l => `<button class="btn s${HX.CFG.lamp === l[0] ? " g" : ""}" data-x="lamp|${l[0] || "auto"}">${l[1]}</button>`).join("")}</div></div>`);
     $("#hxa").onclick = async e => {
